@@ -1,0 +1,41 @@
+# ── Spring Boot / Java ──
+backend/target/
+backend/.mvn/
+*.class
+*.jar
+*.war
+backend/application-local.properties
+
+# ── React / Node ──
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+
+# ── Python / Flask ──
+ml-service/venv/
+ml-service/__pycache__/
+ml-service/*.pkl
+ml-service/*.pyc
+ml-service/.env
+ml-service/data/
+
+# ── Secrets — NEVER COMMIT ──
+.env
+.env.local
+*.env
+application-local.properties
+*-local.properties
+**/application-local.properties
+
+# ── IDE ──
+.idea/
+.vscode/settings.json
+*.iml
+.DS_Store
+Thumbs.db
+
+# ── Logs ──
+*.log
+logs/
