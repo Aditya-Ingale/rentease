@@ -39,3 +39,20 @@ Thumbs.db
 # ── Logs ──
 *.log
 logs/
+
+
+# IntelliJ build output
+out/
+/out/
+
+# ── IDE ──
+.idea/
+.vscode/settings.json
+*.iml
+.DS_Store
+Thumbs.db
+
+# IntelliJ build output
+out/
+backend/out/
+*.class
