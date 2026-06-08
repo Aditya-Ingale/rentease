@@ -18,6 +18,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final EmailService emailService;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -39,8 +40,7 @@ public class AuthService {
 
         User saved = userRepository.save(user);
 
-        // TODO Day 3: send OTP via email using JavaMailSender
-        System.out.println("OTP for " + request.getEmail() + ": " + otp);
+        emailService.sendOtpEmail(request.getEmail(), request.getName(), otp);
 
         return AuthResponse.builder()
                 .userId(saved.getId())
@@ -66,6 +66,7 @@ public class AuthService {
         user.setOtpCode(null);
         user.setOtpExpiry(null);
         userRepository.save(user);
+        emailService.sendWelcomeEmail(user.getEmail(), user.getName());
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
 
@@ -116,5 +117,26 @@ public class AuthService {
 
     private String generateOtp() {
         return String.format("%06d", new Random().nextInt(999999));
+    }
+
+    public AuthResponse resendOtp(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Email not found"));
+
+        if (user.isEnabled()) {
+            throw new RuntimeException("Account already verified");
+        }
+
+        String otp = generateOtp();
+        user.setOtpCode(otp);
+        user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
+        userRepository.save(user);
+
+        emailService.sendOtpEmail(user.getEmail(), user.getName(), otp);
+
+        return AuthResponse.builder()
+                .userId(user.getId())
+                .message("OTP resent to " + email)
+                .build();
     }
 }
