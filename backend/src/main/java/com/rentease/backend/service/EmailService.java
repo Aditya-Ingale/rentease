@@ -1,0 +1,61 @@
+package com.rentease.backend.service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class EmailService {
+
+    private final JavaMailSender mailSender;
+
+    public void sendOtpEmail(String toEmail, String name, String otp) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(toEmail);
+            message.setSubject("RentEase — Your OTP Verification Code");
+            message.setText(
+                    "Hello " + name + ",\n\n" +
+                            "Welcome to RentEase!\n\n" +
+                            "Your OTP verification code is:\n\n" +
+                            "        " + otp + "\n\n" +
+                            "This code is valid for 10 minutes.\n" +
+                            "Do not share this code with anyone.\n\n" +
+                            "If you did not register on RentEase, please ignore this email.\n\n" +
+                            "Regards,\n" +
+                            "The RentEase Team"
+            );
+            mailSender.send(message);
+            log.info("OTP email sent to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send OTP email to {}: {}", toEmail, e.getMessage());
+            throw new RuntimeException("Failed to send OTP email. Please try again.");
+        }
+    }
+
+    public void sendWelcomeEmail(String toEmail, String name) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(toEmail);
+            message.setSubject("Welcome to RentEase!");
+            message.setText(
+                    "Hello " + name + ",\n\n" +
+                            "Your account has been verified successfully!\n\n" +
+                            "You can now:\n" +
+                            "- Search properties across Indian cities\n" +
+                            "- Get AI-powered fair rent estimates\n" +
+                            "- Book properties directly\n\n" +
+                            "Start exploring: http://localhost:5173\n\n" +
+                            "Regards,\n" +
+                            "The RentEase Team"
+            );
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send welcome email to {}: {}", toEmail, e.getMessage());
+        }
+    }
+}
