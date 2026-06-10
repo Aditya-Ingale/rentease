@@ -9,6 +9,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import com.rentease.backend.service.ImageUploadService;
+import com.rentease.backend.service.SseService;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -18,6 +23,8 @@ import java.util.List;
 public class PropertyController {
 
     private final PropertyService propertyService;
+    private final ImageUploadService imageUploadService;
+    private final SseService sseService;
 
     // Public — search listings
     @GetMapping
@@ -77,5 +84,32 @@ public class PropertyController {
         String email = SecurityContextHolder.getContext()
                 .getAuthentication().getName();
         return ResponseEntity.ok(propertyService.getLandlordProperties(email));
+    }
+
+    // Upload images
+    @PostMapping("/{id}/images")
+    public ResponseEntity<List<String>> uploadImages(
+            @PathVariable Long id,
+            @RequestParam("files") List<MultipartFile> files) {
+        String email = SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        return ResponseEntity.ok(
+                imageUploadService.uploadImages(id, files, email));
+    }
+
+    // Delete image
+    @DeleteMapping("/images/{imageId}")
+    public ResponseEntity<Void> deleteImage(@PathVariable Long imageId) {
+        String email = SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        imageUploadService.deleteImage(imageId, email);
+        return ResponseEntity.noContent().build();
+    }
+
+    // SSE stream
+    @GetMapping(value = "/stream",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamListings() {
+        return sseService.createEmitter();
     }
 }
