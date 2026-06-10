@@ -18,6 +18,7 @@ public class PropertyService {
 
     private final PropertyRepository propertyRepository;
     private final UserRepository userRepository;
+    private final SseService sseService;
 
     public PropertyResponse createProperty(PropertyRequest request, String landlordEmail) {
         User landlord = userRepository.findByEmail(landlordEmail)
@@ -44,6 +45,7 @@ public class PropertyService {
                 .build();
 
         Property saved = propertyRepository.save(property);
+        sseService.broadcastNewListing(mapToResponse(saved));
         return mapToResponse(saved);
     }
 
@@ -136,6 +138,21 @@ public class PropertyService {
             imageUrls = List.of();
         }
 
+        List<PropertyResponse.AmenityInfo> amenityInfos;
+        try {
+            amenityInfos = p.getAmenities() != null
+                    ? p.getAmenities().stream()
+                    .map(a -> PropertyResponse.AmenityInfo.builder()
+                            .id(a.getId())
+                            .name(a.getName())
+                            .icon(a.getIcon())
+                            .build())
+                    .toList()
+                    : List.of();
+        } catch (Exception e) {
+            amenityInfos = List.of();
+        }
+
         return PropertyResponse.builder()
                 .id(p.getId())
                 .title(p.getTitle())
@@ -160,6 +177,7 @@ public class PropertyService {
                         .phone(p.getLandlord().getPhone())
                         .build())
                 .imageUrls(imageUrls)
+                .amenities(amenityInfos)
                 .createdAt(p.getCreatedAt())
                 .build();
     }

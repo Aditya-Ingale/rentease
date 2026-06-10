@@ -43,4 +43,16 @@ public class PropertyResponse {
         private String name;
         private String phone;
     }
+
+    private List<AmenityInfo> amenities;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AmenityInfo {
+        private Long id;
+        private String name;
+        private String icon;
+    }
 }

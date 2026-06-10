@@ -31,6 +31,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/properties/**").permitAll()
+                        .requestMatchers("/api/properties/stream").permitAll()
+                        .requestMatchers("/api/amenities/**").permitAll()
                         .requestMatchers("/api/listings/stream").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/landlord/**").hasRole("LANDLORD")
