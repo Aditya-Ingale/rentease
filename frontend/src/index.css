@@ -1,3 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /* Light mode (default) */
+  --bg: #FAF8F4;
+  --surface: #FFFFFF;
+  --surface-alt: #F1EDE6;
+  --border: #E5E0D8;
+  --text-primary: #2B2D2A;
+  --text-secondary: #6B6A65;
+  --text-muted: #A8A6A0;
+
+  --success: #6B9B7C;     --success-bg: #E8F1EA;
+  --info: #5B8DBA;        --info-bg: #E8F0F7;
+  --warning: #D9A05B;     --warning-bg: #FBF1E3;
+  --danger: #C5615A;      --danger-bg: #F7E8E6;
+
+  /* Default accent = tenant (overridden per-role below) */
+  --accent: #4A7C7E;
+  --accent-hover: #3D6868;
+}
+
+.dark {
+  --bg: #1A1D1C;
+  --surface: #252927;
+  --surface-alt: #2F3431;
+  --border: #3A3F3C;
+  --text-primary: #EDEBE6;
+  --text-secondary: #A8A6A0;
+  --text-muted: #6B6A65;
+
+  --success-bg: #1F2B23;
+  --info-bg: #1E2933;
+  --warning-bg: #332C1E;
+  --danger-bg: #332220;
+}
+
+/* Role-based accent — applied via data attribute on <html> or root layout */
+[data-role="tenant"] {
+  --accent: #4A7C7E;
+  --accent-hover: #3D6868;
+}
+[data-role="landlord"] {
+  --accent: #C77B58;
+  --accent-hover: #B3654A;
+}
+[data-role="admin"] {
+  --accent: #5B6B73;
+  --accent-hover: #4A5860;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  transition: background-color 220ms ease, color 220ms ease;
+}
