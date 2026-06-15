@@ -58,4 +58,28 @@ public class EmailService {
             log.error("Failed to send welcome email to {}: {}", toEmail, e.getMessage());
         }
     }
+
+    public void sendBookingNotification(String toEmail, String toName,
+                                        String otherPartyName, String propertyTitle,
+                                        String subject) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(toEmail);
+            message.setSubject("RentEase — " + subject);
+            message.setText(
+                    "Hello " + toName + ",\n\n" +
+                            subject + "\n\n" +
+                            "Property: " + propertyTitle + "\n" +
+                            "Related to: " + otherPartyName + "\n\n" +
+                            "Log in to RentEase to view full details: http://localhost:5173\n\n" +
+                            "Regards,\n" +
+                            "The RentEase Team"
+            );
+            mailSender.send(message);
+            log.info("Booking notification sent to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send booking notification to {}: {}", toEmail, e.getMessage());
+            // Don't throw — booking should succeed even if email fails
+        }
+    }
 }
