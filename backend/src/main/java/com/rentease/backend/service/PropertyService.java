@@ -19,6 +19,7 @@ public class PropertyService {
     private final PropertyRepository propertyRepository;
     private final UserRepository userRepository;
     private final SseService sseService;
+    private final ReviewRepository reviewRepository;
 
     public PropertyResponse createProperty(PropertyRequest request, String landlordEmail) {
         User landlord = userRepository.findByEmail(landlordEmail)
@@ -132,7 +133,9 @@ public class PropertyService {
         List<String> imageUrls;
         try {
             imageUrls = p.getImages() != null
-                    ? p.getImages().stream().map(PropertyImage::getImageUrl).toList()
+                    ? p.getImages().stream()
+                    .map(PropertyImage::getImageUrl)
+                    .toList()
                     : List.of();
         } catch (Exception e) {
             imageUrls = List.of();
@@ -152,6 +155,10 @@ public class PropertyService {
         } catch (Exception e) {
             amenityInfos = List.of();
         }
+
+        // Fetch rating and review count
+        Double avgRating = getAverageRating(p.getId());
+        Integer reviewCount = getReviewCount(p.getId());
 
         return PropertyResponse.builder()
                 .id(p.getId())
@@ -178,7 +185,29 @@ public class PropertyService {
                         .build())
                 .imageUrls(imageUrls)
                 .amenities(amenityInfos)
+                .averageRating(avgRating)
+                .totalReviews(reviewCount)
                 .createdAt(p.getCreatedAt())
                 .build();
+    }
+
+    private Double getAverageRating(Long propertyId) {
+        try {
+            Double avg = reviewRepository
+                    .findAverageRatingByPropertyId(propertyId);
+            return avg != null ? Math.round(avg * 10.0) / 10.0 : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Integer getReviewCount(Long propertyId) {
+        try {
+            Long count = reviewRepository
+                    .countReviewsByPropertyId(propertyId);
+            return count != null ? count.intValue() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

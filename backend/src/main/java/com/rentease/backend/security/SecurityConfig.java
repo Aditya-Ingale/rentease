@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/listings/stream").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/landlord/**").hasRole("LANDLORD")
+                        .requestMatchers("/api/reviews/property/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
