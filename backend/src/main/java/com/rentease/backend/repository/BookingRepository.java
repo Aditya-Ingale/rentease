@@ -2,7 +2,10 @@ package com.rentease.backend.repository;
 
 import com.rentease.backend.entity.BookingRequest;
 import com.rentease.backend.enums.BookingStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -24,4 +27,26 @@ public interface BookingRepository extends JpaRepository<BookingRequest, Long> {
 
     boolean existsByTenantIdAndPropertyIdAndStatus(
             Long tenantId, Long propertyId, BookingStatus status);
+
+    // Count all bookings for landlord
+    long countByProperty_Landlord_Id(Long landlordId);
+
+    // Recent bookings for landlord (limit via Pageable)
+    @Query("SELECT b FROM BookingRequest b " +
+            "WHERE b.property.landlord.id = :landlordId " +
+            "ORDER BY b.createdAt DESC")
+    List<BookingRequest> findRecentByLandlordId(
+            @Param("landlordId") Long landlordId,
+            Pageable pageable);
+
+    // Count accepted bookings per property
+    @Query("SELECT COUNT(b) FROM BookingRequest b " +
+            "WHERE b.property.id = :propertyId " +
+            "AND b.status = 'ACCEPTED'")
+    long countAcceptedByPropertyId(@Param("propertyId") Long propertyId);
+
+    // Count all bookings per property
+    @Query("SELECT COUNT(b) FROM BookingRequest b " +
+            "WHERE b.property.id = :propertyId")
+    long countAllByPropertyId(@Param("propertyId") Long propertyId);
 }
