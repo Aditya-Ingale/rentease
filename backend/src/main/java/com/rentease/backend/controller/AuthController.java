@@ -44,4 +44,21 @@ public class AuthController {
     public ResponseEntity<AuthResponse> resendOtp(@RequestParam String email) {
         return ResponseEntity.ok(authService.resendOtp(email));
     }
+
+    @PutMapping("/profile")
+    public ResponseEntity<AuthResponse> updateProfile(
+            @Valid @RequestBody UpdateProfileRequest request) {
+        String email = SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        return ResponseEntity.ok(authService.updateProfile(request, email));
+    }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<AuthResponse> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
+        String email = SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        return ResponseEntity.ok(
+                authService.changePassword(request, email));
+    }
 }

@@ -139,4 +139,50 @@ public class AuthService {
                 .message("OTP resent to " + email)
                 .build();
     }
+
+    public AuthResponse updateProfile(UpdateProfileRequest request,
+                                      String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setName(request.getName());
+        user.setPhone(request.getPhone());
+        User saved = userRepository.save(user);
+
+        return AuthResponse.builder()
+                .userId(saved.getId())
+                .name(saved.getName())
+                .email(saved.getEmail())
+                .role(saved.getRole())
+                .message("Profile updated successfully")
+                .build();
+    }
+
+    public AuthResponse changePassword(ChangePasswordRequest request,
+                                       String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!passwordEncoder.matches(
+                request.getCurrentPassword(), user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new RuntimeException(
+                    "New password and confirm password do not match");
+        }
+
+        if (request.getNewPassword().equals(request.getCurrentPassword())) {
+            throw new RuntimeException(
+                    "New password cannot be the same as current password");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        return AuthResponse.builder()
+                .message("Password changed successfully")
+                .build();
+    }
 }
