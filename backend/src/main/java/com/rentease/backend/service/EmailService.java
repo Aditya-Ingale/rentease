@@ -82,4 +82,35 @@ public class EmailService {
             // Don't throw — booking should succeed even if email fails
         }
     }
+
+
+    public void sendPasswordResetEmail(String toEmail,
+                                       String name,
+                                       String resetToken) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(toEmail);
+            message.setSubject("RentEase — Password Reset Request");
+            message.setText(
+                    "Hello " + name + ",\n\n" +
+                            "We received a request to reset your password.\n\n" +
+                            "Your password reset token is:\n\n" +
+                            "        " + resetToken + "\n\n" +
+                            "This token is valid for 15 minutes.\n" +
+                            "Use it on the reset password page: " +
+                            "http://localhost:5173/reset-password\n\n" +
+                            "If you did not request a password reset, " +
+                            "please ignore this email.\n\n" +
+                            "Regards,\n" +
+                            "The RentEase Team"
+            );
+            mailSender.send(message);
+            log.info("Password reset email sent to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send reset email to {}: {}",
+                    toEmail, e.getMessage());
+            throw new RuntimeException(
+                    "Failed to send reset email. Please try again.");
+        }
+    }
 }
