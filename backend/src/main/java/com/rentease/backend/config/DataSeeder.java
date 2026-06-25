@@ -17,10 +17,10 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class DataSeeder implements ApplicationRunner {
 
-    @Value("${ADMIN_EMAIL:admin@rentease.com}")
+    @Value("${ADMIN_EMAIL}")
     private String adminEmail;
 
-    @Value("${ADMIN_PASSWORD:Admin@123}")
+    @Value("${ADMIN_PASSWORD}")
     private String adminPassword;
 
     private final UserRepository userRepository;
