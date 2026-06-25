@@ -38,4 +38,13 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
 
     // Count active properties by landlord
     long countByLandlordIdAndStatus(Long landlordId, PropertyStatus status);
+
+    // Count active properties
+    long countByStatus(PropertyStatus status);
+
+    // City-wise listing count
+    @Query("SELECT p.city, COUNT(p) FROM Property p " +
+            "WHERE p.status = 'ACTIVE' " +
+            "GROUP BY p.city ORDER BY COUNT(p) DESC")
+    List<Object[]> countListingsByCity();
 }

@@ -49,4 +49,15 @@ public interface BookingRepository extends JpaRepository<BookingRequest, Long> {
     @Query("SELECT COUNT(b) FROM BookingRequest b " +
             "WHERE b.property.id = :propertyId")
     long countAllByPropertyId(@Param("propertyId") Long propertyId);
+
+    // Total bookings count
+    long count();
+
+    // City-wise booking count
+    @Query("SELECT p.city, COUNT(b) FROM BookingRequest b " +
+            "JOIN b.property p " +
+            "GROUP BY p.city ORDER BY COUNT(b) DESC")
+    List<Object[]> countBookingsByCity();
+
+    long countByStatus(BookingStatus status);
 }

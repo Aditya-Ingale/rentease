@@ -185,4 +185,56 @@ public class AuthService {
                 .message("Password changed successfully")
                 .build();
     }
+
+    public AuthResponse forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() ->
+                        new RuntimeException("No account found with this email"));
+
+        if (!user.isEnabled()) {
+            throw new RuntimeException(
+                    "Account not verified. Please verify your email first");
+        }
+
+        // Generate UUID reset token
+        String resetToken = java.util.UUID.randomUUID().toString();
+        user.setResetToken(resetToken);
+        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15));
+        userRepository.save(user);
+
+        emailService.sendPasswordResetEmail(
+                user.getEmail(), user.getName(), resetToken);
+
+        return AuthResponse.builder()
+                .message("Password reset email sent to " + request.getEmail())
+                .build();
+    }
+
+    public AuthResponse resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByResetToken(request.getToken())
+                .orElseThrow(() ->
+                        new RuntimeException("Invalid or expired reset token"));
+
+        if (LocalDateTime.now().isAfter(user.getResetTokenExpiry())) {
+            user.setResetToken(null);
+            user.setResetTokenExpiry(null);
+            userRepository.save(user);
+            throw new RuntimeException(
+                    "Reset token has expired. Please request a new one");
+        }
+
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new RuntimeException(
+                    "New password and confirm password do not match");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setResetToken(null);
+        user.setResetTokenExpiry(null);
+        userRepository.save(user);
+
+        return AuthResponse.builder()
+                .message("Password reset successfully. Please login.")
+                .build();
+    }
 }
