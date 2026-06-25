@@ -113,4 +113,31 @@ public class EmailService {
                     "Failed to send reset email. Please try again.");
         }
     }
+
+    public void sendPaymentConfirmation(String toEmail,
+                                        String name,
+                                        String propertyTitle,
+                                        Double amount) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(toEmail);
+            message.setSubject("RentEase — Payment Confirmed!");
+            message.setText(
+                    "Hello " + name + ",\n\n" +
+                            "Your payment has been confirmed successfully!\n\n" +
+                            "Property: " + propertyTitle + "\n" +
+                            "Amount Paid: ₹" + String.format("%.2f", amount) + "\n\n" +
+                            "Your booking is now COMPLETED.\n" +
+                            "You can now write a review after your stay.\n\n" +
+                            "Thank you for using RentEase!\n\n" +
+                            "Regards,\n" +
+                            "The RentEase Team"
+            );
+            mailSender.send(message);
+            log.info("Payment confirmation sent to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send payment confirmation to {}: {}",
+                    toEmail, e.getMessage());
+        }
+    }
 }
