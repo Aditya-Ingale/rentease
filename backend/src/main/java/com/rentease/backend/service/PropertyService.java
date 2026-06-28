@@ -6,6 +6,7 @@ import com.rentease.backend.enums.*;
 import com.rentease.backend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
@@ -14,12 +15,14 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class PropertyService {
 
     private final PropertyRepository propertyRepository;
     private final UserRepository userRepository;
     private final SseService sseService;
     private final ReviewRepository reviewRepository;
+    private final AiPredictionService aiPredictionService;
 
     public PropertyResponse createProperty(PropertyRequest request, String landlordEmail) {
         User landlord = userRepository.findByEmail(landlordEmail)
@@ -46,6 +49,7 @@ public class PropertyService {
                 .build();
 
         Property saved = propertyRepository.save(property);
+        cacheAiPrediction(saved);
         sseService.broadcastNewListing(mapToResponse(saved));
         return mapToResponse(saved);
     }
@@ -94,7 +98,9 @@ public class PropertyService {
         property.setTotalFloors(request.getTotalFloors());
         property.setFurnishingStatus(request.getFurnishingStatus());
 
-        return mapToResponse(propertyRepository.save(property));
+        Property updated = propertyRepository.save(property);
+        cacheAiPrediction(updated);
+        return mapToResponse(updated);
     }
 
     public void deleteProperty(Long id, String landlordEmail) {
@@ -210,4 +216,38 @@ public class PropertyService {
             return null;
         }
     }
+
+
+    private void cacheAiPrediction(Property property) {
+        try {
+            RentPredictionRequest request =
+                    new RentPredictionRequest();
+            request.setBhk(property.getBhk());
+            request.setSqft(property.getSqft());
+            request.setFloor(property.getFloor());
+            request.setFurnished(
+                    property.getFurnishingStatus().ordinal());
+            request.setBathrooms(property.getBhk());
+            request.setCity(property.getCity());
+            request.setLocality(property.getLocality());
+
+            RentPredictionResponse prediction =
+                    aiPredictionService.predictRent(request);
+
+            property.setAiMinRent(
+                    prediction.getMinRent().doubleValue());
+            property.setAiSuggestedRent(
+                    prediction.getSuggested().doubleValue());
+            property.setAiMaxRent(
+                    prediction.getMaxRent().doubleValue());
+
+            propertyRepository.save(property);
+            log.info("AI prediction cached for property {}",
+                    property.getId());
+        } catch (Exception e) {
+            log.warn("AI prediction failed for property {}: {}",
+                    property.getId(), e.getMessage());
+        }
+    }
+
 }
