@@ -29,12 +29,40 @@ public class PaymentService {
     private final UserRepository userRepository;
     private final RazorpayClient razorpayClient;
     private final EmailService emailService;
+    private final PropertyRepository propertyRepository;
 
     @Value("${razorpay.key.id}")
     private String razorpayKeyId;
 
     @Value("${razorpay.key.secret}")
     private String razorpayKeySecret;
+
+    // ── Resolve the actual rent to charge ──
+    // If the booking was negotiated and the counter offer was accepted, that
+    // price is the source of truth — NOT the original listing price.
+    private double resolveFinalRent(BookingRequest booking) {
+        boolean negotiationAccepted = booking.getCounterOffer() != null &&
+                (booking.getStatus() == BookingStatus.ACCEPTED ||
+                        booking.getStatus() == BookingStatus.COMPLETED);
+
+        return negotiationAccepted
+                ? booking.getCounterOffer()
+                : booking.getProperty().getRent();
+    }
+
+    // ── Build the upfront fee breakdown: 1st month rent + 2 months deposit ──
+    private PaymentOrderResponse.Breakdown buildBreakdown(BookingRequest booking) {
+        double rent = resolveFinalRent(booking);
+        double deposit = rent * 2;
+        double brokerage = 0.0;
+
+        return PaymentOrderResponse.Breakdown.builder()
+                .firstMonth(rent)
+                .deposit(deposit)
+                .brokerage(brokerage)
+                .total(rent + deposit + brokerage)
+                .build();
+    }
 
     // ── Create Razorpay Order ──
     public PaymentOrderResponse createOrder(Long bookingId,
@@ -70,12 +98,14 @@ public class PaymentService {
                     "Payment only allowed for accepted bookings");
         }
 
+        PaymentOrderResponse.Breakdown breakdown = buildBreakdown(booking);
+        double totalAmount = breakdown.getTotal();
+
         // Step 4 — If pending payment exists, reuse it
         if (existingPayment != null &&
                 existingPayment.getStatus() == PaymentStatus.PENDING) {
             try {
-                int amountInPaise = (int) (booking.getProperty()
-                        .getRent() * 100);
+                int amountInPaise = (int) Math.round(totalAmount * 100);
 
                 JSONObject orderRequest = new JSONObject();
                 orderRequest.put("amount", amountInPaise);
@@ -86,15 +116,17 @@ public class PaymentService {
                 String razorpayOrderId = order.get("id");
 
                 existingPayment.setRazorpayOrderId(razorpayOrderId);
+                existingPayment.setAmount(totalAmount);
                 existingPayment.setStatus(PaymentStatus.PENDING);
                 paymentRepository.save(existingPayment);
 
-                log.info("Reused existing payment for booking: {}",
-                        bookingId);
+                log.info("Reused existing payment for booking: {} amount: {}",
+                        bookingId, totalAmount);
 
                 return PaymentOrderResponse.builder()
                         .razorpayOrderId(razorpayOrderId)
-                        .amount(booking.getProperty().getRent())
+                        .amount(totalAmount)
+                        .breakdown(breakdown)
                         .currency("INR")
                         .keyId(razorpayKeyId)
                         .bookingId(bookingId)
@@ -112,8 +144,7 @@ public class PaymentService {
 
         // Step 5 — Create fresh payment record
         try {
-            int amountInPaise = (int) (booking.getProperty()
-                    .getRent() * 100);
+            int amountInPaise = (int) Math.round(totalAmount * 100);
 
             JSONObject orderRequest = new JSONObject();
             orderRequest.put("amount", amountInPaise);
@@ -131,19 +162,20 @@ public class PaymentService {
             Payment payment = Payment.builder()
                     .booking(booking)
                     .razorpayOrderId(razorpayOrderId)
-                    .amount(booking.getProperty().getRent())
+                    .amount(totalAmount)
                     .currency("INR")
                     .status(PaymentStatus.PENDING)
                     .build();
 
             paymentRepository.save(payment);
 
-            log.info("Razorpay order created: {} for booking: {}",
-                    razorpayOrderId, bookingId);
+            log.info("Razorpay order created: {} for booking: {} amount: {}",
+                    razorpayOrderId, bookingId, totalAmount);
 
             return PaymentOrderResponse.builder()
                     .razorpayOrderId(razorpayOrderId)
-                    .amount(booking.getProperty().getRent())
+                    .amount(totalAmount)
+                    .breakdown(breakdown)
                     .currency("INR")
                     .keyId(razorpayKeyId)
                     .bookingId(bookingId)
@@ -194,6 +226,10 @@ public class PaymentService {
         BookingRequest booking = payment.getBooking();
         booking.setStatus(BookingStatus.COMPLETED);
         bookingRepository.save(booking);
+
+        Property property = booking.getProperty();
+        property.setStatus(PropertyStatus.SUSPENDED);
+        propertyRepository.save(property);
 
         // Send confirmation email to tenant
         emailService.sendPaymentConfirmation(

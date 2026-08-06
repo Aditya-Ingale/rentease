@@ -15,13 +15,13 @@ import java.util.List;
 public interface PropertyRepository extends JpaRepository<Property, Long> {
 
     // Search with filters
-    @Query("SELECT p FROM Property p WHERE p.status = 'ACTIVE'" +
-            " AND (:city IS NULL OR LOWER(p.city) = LOWER(:city))" +
-            " AND (:bhk IS NULL OR p.bhk = :bhk)" +
-            " AND (:minRent IS NULL OR p.rent >= :minRent)" +
-            " AND (:maxRent IS NULL OR p.rent <= :maxRent)" +
-            " AND (:furnished IS NULL OR p.furnishingStatus = :furnished)" +
-            " AND (:propertyType IS NULL OR p.propertyType = :propertyType)")
+    @Query("SELECT p FROM Property p WHERE p.status = 'ACTIVE' " +
+            "AND (:city IS NULL OR LOWER(p.city) = LOWER(CAST(:city AS string))) " +
+            "AND (:bhk IS NULL OR p.bhk = :bhk) " +
+            "AND (:minRent IS NULL OR p.rent >= :minRent) " +
+            "AND (:maxRent IS NULL OR p.rent <= :maxRent) " +
+            "AND (:furnished IS NULL OR p.furnishingStatus = :furnished) " +
+            "AND (:propertyType IS NULL OR p.propertyType = :propertyType)")
     Page<Property> searchProperties(
             @Param("city") String city,
             @Param("bhk") Integer bhk,

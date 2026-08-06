@@ -5,6 +5,7 @@ import com.rentease.backend.enums.*;
 import com.rentease.backend.service.PropertyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,12 +15,16 @@ import com.rentease.backend.service.SseService;
 import org.springframework.http.MediaType;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import java.io.IOException;
+import java.util.Map;
 
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/properties")
 @RequiredArgsConstructor
+@Slf4j
 public class PropertyController {
 
     private final PropertyService propertyService;
@@ -88,13 +93,24 @@ public class PropertyController {
 
     // Upload images
     @PostMapping("/{id}/images")
-    public ResponseEntity<List<String>> uploadImages(
+    public ResponseEntity<?> uploadImages(
             @PathVariable Long id,
-            @RequestParam("files") List<MultipartFile> files) {
-        String email = SecurityContextHolder.getContext()
-                .getAuthentication().getName();
-        return ResponseEntity.ok(
-                imageUploadService.uploadImages(id, files, email));
+            @RequestParam("files") MultipartFile[] files) {
+        try {
+            String email = SecurityContextHolder.getContext()
+                    .getAuthentication().getName();
+            return ResponseEntity.ok(
+                    imageUploadService.uploadImages(id,
+                            List.of(files), email));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Image upload failed: {}", e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error",
+                            "Image upload failed. Please try again."));
+        }
     }
 
     // Delete image

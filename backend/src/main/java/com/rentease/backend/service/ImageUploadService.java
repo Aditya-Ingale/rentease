@@ -2,6 +2,7 @@ package com.rentease.backend.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.rentease.backend.config.CloudinaryConfig;
 import com.rentease.backend.entity.Property;
 import com.rentease.backend.entity.PropertyImage;
 import com.rentease.backend.repository.PropertyImageRepository;
@@ -26,6 +27,8 @@ public class ImageUploadService {
     private final Cloudinary cloudinary;
     private final PropertyRepository propertyRepository;
     private final PropertyImageRepository propertyImageRepository;
+    private final CloudinaryConfig cloudinaryConfig;
+    private final ImageSanitizationService sanitizationService;
 
     public List<String> uploadImages(Long propertyId,
                                      List<MultipartFile> files,
@@ -34,28 +37,29 @@ public class ImageUploadService {
                 .orElseThrow(() -> new RuntimeException("Property not found"));
 
         if (!property.getLandlord().getEmail().equals(landlordEmail)) {
-            throw new RuntimeException("You can only upload images for your own listings");
+            throw new RuntimeException(
+                    "You can only upload images for your own listings");
         }
 
         if (files.size() > 5) {
-            throw new RuntimeException("Maximum 5 images allowed per property");
+            throw new IllegalArgumentException(
+                    "Maximum 5 images allowed per property");
         }
 
         List<String> uploadedUrls = new ArrayList<>();
         boolean isFirst = propertyImageRepository
                 .findByPropertyId(propertyId).isEmpty();
 
-        for (MultipartFile file : files) {
+        for (int i = 0; i < files.size(); i++) {
+            MultipartFile file = files.get(i);
             try {
-                // Validate file type
-                String contentType = file.getContentType();
-                if (contentType == null || !contentType.startsWith("image/")) {
-                    throw new RuntimeException("Only image files are allowed");
-                }
+                // ── Sanitize before uploading ──
+                // Validates real MIME type, dimensions, strips EXIF
+                byte[] sanitizedBytes = sanitizationService.sanitize(file);
 
-                // Upload to Cloudinary
+                // Upload sanitized bytes to Cloudinary
                 Map uploadResult = cloudinary.uploader().upload(
-                        file.getBytes(),
+                        sanitizedBytes,
                         ObjectUtils.asMap(
                                 "folder", "rentease/properties/" + propertyId,
                                 "transformation", "q_auto,f_auto,w_800,h_600,c_fill"
@@ -77,11 +81,21 @@ public class ImageUploadService {
                 uploadedUrls.add(imageUrl);
                 isFirst = false;
 
-                log.info("Image uploaded for property {}: {}", propertyId, imageUrl);
+                log.info("Image {}/{} sanitized and uploaded for property {}: {}",
+                        i + 1, files.size(), propertyId, imageUrl);
 
+            } catch (IllegalArgumentException e) {
+                // Sanitization rejection — clean user-facing message
+                log.warn("Image {} rejected for property {}: {}",
+                        file.getOriginalFilename(), propertyId, e.getMessage());
+                throw new IllegalArgumentException(
+                        "Image " + (i + 1) + " (" +
+                                file.getOriginalFilename() + "): " + e.getMessage());
             } catch (IOException e) {
-                log.error("Failed to upload image: {}", e.getMessage());
-                throw new RuntimeException("Failed to upload image: " + e.getMessage());
+                log.error("Failed to upload image {}: {}",
+                        file.getOriginalFilename(), e.getMessage());
+                throw new RuntimeException(
+                        "Failed to upload image: " + e.getMessage());
             }
         }
 
@@ -94,22 +108,20 @@ public class ImageUploadService {
                 .orElseThrow(() -> new RuntimeException("Image not found"));
 
         if (!image.getProperty().getLandlord().getEmail().equals(landlordEmail)) {
-            throw new RuntimeException("You can only delete your own property images");
+            throw new RuntimeException(
+                    "You can only delete your own property images");
         }
 
         try {
-            // Delete from Cloudinary
             cloudinary.uploader().destroy(
                     image.getPublicId(),
                     ObjectUtils.emptyMap()
             );
-
-            // Delete from DB
             propertyImageRepository.delete(image);
             log.info("Image deleted: {}", image.getPublicId());
-
         } catch (IOException e) {
-            throw new RuntimeException("Failed to delete image: " + e.getMessage());
+            throw new RuntimeException(
+                    "Failed to delete image: " + e.getMessage());
         }
     }
 }

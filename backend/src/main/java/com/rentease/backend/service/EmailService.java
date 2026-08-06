@@ -2,6 +2,7 @@ package com.rentease.backend.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,9 @@ import org.springframework.stereotype.Service;
 public class EmailService {
 
     private final JavaMailSender mailSender;
+
+    @Value("${app.frontend.url:http://localhost:3000}")
+    private String frontendUrl;
 
     public void sendOtpEmail(String toEmail, String name, String otp) {
         try {
@@ -49,7 +53,7 @@ public class EmailService {
                             "- Search properties across Indian cities\n" +
                             "- Get AI-powered fair rent estimates\n" +
                             "- Book properties directly\n\n" +
-                            "Start exploring: http://localhost:5173\n\n" +
+                            "Start exploring: " + frontendUrl + "\n\n" +
                             "Regards,\n" +
                             "The RentEase Team"
             );
@@ -71,7 +75,7 @@ public class EmailService {
                             subject + "\n\n" +
                             "Property: " + propertyTitle + "\n" +
                             "Related to: " + otherPartyName + "\n\n" +
-                            "Log in to RentEase to view full details: http://localhost:5173\n\n" +
+                            "Log in to RentEase to view full details: " + frontendUrl + "\n\n" +
                             "Regards,\n" +
                             "The RentEase Team"
             );
@@ -79,10 +83,8 @@ public class EmailService {
             log.info("Booking notification sent to {}", toEmail);
         } catch (Exception e) {
             log.error("Failed to send booking notification to {}: {}", toEmail, e.getMessage());
-            // Don't throw — booking should succeed even if email fails
         }
     }
-
 
     public void sendPasswordResetEmail(String toEmail,
                                        String name,
@@ -93,22 +95,19 @@ public class EmailService {
             message.setSubject("RentEase — Password Reset Request");
             message.setText(
                     "Hello " + name + ",\n\n" +
-                            "We received a request to reset your password.\n\n" +
-                            "Your password reset token is:\n\n" +
-                            "        " + resetToken + "\n\n" +
-                            "This token is valid for 15 minutes.\n" +
-                            "Use it on the reset password page: " +
-                            "http://localhost:5173/reset-password\n\n" +
-                            "If you did not request a password reset, " +
-                            "please ignore this email.\n\n" +
-                            "Regards,\n" +
-                            "The RentEase Team"
+                            "We received a request to reset your RentEase password.\n\n" +
+                            "Click the link below to reset your password:\n\n" +
+                            frontendUrl + "/reset-password?token=" + resetToken + "\n\n" +
+                            "Or copy this token manually if the link doesn't work:\n" +
+                            resetToken + "\n\n" +
+                            "This link expires in 15 minutes.\n\n" +
+                            "If you did not request a password reset, ignore this email.\n\n" +
+                            "Regards,\nThe RentEase Team"
             );
             mailSender.send(message);
             log.info("Password reset email sent to {}", toEmail);
         } catch (Exception e) {
-            log.error("Failed to send reset email to {}: {}",
-                    toEmail, e.getMessage());
+            log.error("Failed to send reset email: {}", e.getMessage());
             throw new RuntimeException(
                     "Failed to send reset email. Please try again.");
         }

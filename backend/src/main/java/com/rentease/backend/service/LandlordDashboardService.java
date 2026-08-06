@@ -50,9 +50,15 @@ public class LandlordDashboardService {
                 .countByProperty_Landlord_Id(landlordId);
 
         // ── Occupancy ──
-        long occupiedUnits = acceptedRequests;
-        double occupancyRate = totalListings > 0
-                ? Math.round((occupiedUnits * 100.0 / totalListings) * 10.0) / 10.0
+        long suspendedUnits = allProperties.stream()
+                .filter(p -> p.getStatus() == PropertyStatus.SUSPENDED)
+                .count();
+
+        long occupancyDenominator = activeListings + suspendedUnits;
+
+        long occupiedUnits = suspendedUnits;
+        double occupancyRate = occupancyDenominator > 0
+                ? Math.round((occupiedUnits * 100.0 / occupancyDenominator) * 10.0) / 10.0
                 : 0.0;
 
         // ── Revenue ──
