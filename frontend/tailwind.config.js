@@ -1,45 +1,46 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'class', // toggled via <html class="dark">
-  content: ["./index.html", "./src/**/*.{js,jsx}"],
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
   theme: {
     extend: {
       colors: {
-        bg: 'var(--bg)',
-        surface: 'var(--surface)',
-        'surface-alt': 'var(--surface-alt)',
-        border: 'var(--border)',
-        'text-primary': 'var(--text-primary)',
-        'text-secondary': 'var(--text-secondary)',
-        'text-muted': 'var(--text-muted)',
-        accent: 'var(--accent)',
-        'accent-hover': 'var(--accent-hover)',
-        success: 'var(--success)',
-        'success-bg': 'var(--success-bg)',
-        info: 'var(--info)',
-        'info-bg': 'var(--info-bg)',
-        warning: 'var(--warning)',
-        'warning-bg': 'var(--warning-bg)',
-        danger: 'var(--danger)',
-        'danger-bg': 'var(--danger-bg)',
+        brand: {
+          primary: 'var(--color-brand-primary)',
+          secondary: 'var(--color-brand-secondary)',
+          accent: 'var(--color-brand-accent)',
+        },
+        surface: {
+          base: 'var(--color-surface-base)',
+          raised: 'var(--color-surface-raised)',
+          overlay: 'var(--color-surface-overlay)',
+          glass: 'var(--color-surface-glass)',
+        },
+        text: {
+          primary: 'var(--color-text-primary)',
+          secondary: 'var(--color-text-secondary)',
+          muted: 'var(--color-text-muted)',
+        },
+        border: {
+          default: 'var(--color-border)',
+          bright: 'var(--color-border-bright)',
+        },
+        badge: {
+          'fair-deal': 'var(--badge-fair-deal)',
+          'great-value': 'var(--badge-great-value)',
+          'above-market': 'var(--badge-above-market)',
+        }
       },
       fontFamily: {
-        display: ['Fraunces', 'serif'],
-        body: ['Inter', 'sans-serif'],
-      },
-      borderRadius: {
-        card: '14px',
-        button: '10px',
-        pill: '999px',
+        sans: ['Inter', 'sans-serif'],
+        display: ['Space Grotesk', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       boxShadow: {
-        soft: '0 2px 12px rgba(43, 45, 42, 0.06)',
-        'soft-hover': '0 8px 24px rgba(43, 45, 42, 0.10)',
-      },
-      transitionDuration: {
-        fast: '150ms',
-        base: '220ms',
-        slow: '400ms',
+        card: 'var(--shadow-card)',
+        elevated: 'var(--shadow-elevated)',
       },
     },
   },
