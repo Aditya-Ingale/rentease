@@ -12,6 +12,8 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.aspectj.weaver.tools.cache.SimpleCacheFactory.path;
+
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
@@ -33,8 +35,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 // General endpoints — relaxed: 100 requests per minute
                 return Bucket.builder()
                         .addLimit(Bandwidth.builder()
-                                .capacity(100)
-                                .refillGreedy(100, Duration.ofMinutes(1))
+                                .capacity(300)
+                                .refillGreedy(300, Duration.ofMinutes(1))
                                 .build())
                         .build();
             }
@@ -48,6 +50,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String ip = getClientIp(request);
+        if (path.equals("/api/properties/stream") ||
+                path.equals("/api/bookings/stream")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         String path = request.getRequestURI();
         boolean isAuthEndpoint = path.startsWith("/api/auth/");
 
