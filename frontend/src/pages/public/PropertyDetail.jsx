@@ -534,12 +534,12 @@ export default function PropertyDetail() {
 
                   <div className="flex gap-2">
                     <input
-                      type="text"
-                      placeholder="Share your living experience, maintenance quality, or neighborhood feedback..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      className="flex-1 bg-white border border-white/5 px-4 py-2.5 rounded-xl text-xs outline-none focus:border-brand-primary text-text-primary review-comment-input"
-                    />
+  type="text"
+  placeholder="Share your living experience, maintenance quality, or neighborhood feedback..."
+  value={newComment}
+  onChange={(e) => setNewComment(e.target.value)}
+  className="flex-1 bg-white border border-white/5 px-4 py-2.5 rounded-xl text-xs outline-none focus:border-brand-primary !text-black placeholder:text-gray-400"
+/>
                     <Button
                       type="submit"
                       variant="primary"
