@@ -7,6 +7,7 @@ import { useThemeStore } from './store/themeStore';
 // Layouts
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+import ScrollToTop from './components/ScrollToTop';
 
 // Router Guardian
 import ProtectedRoute from './router/ProtectedRoute';
@@ -42,6 +43,7 @@ function AnimatedAppRoutes() {
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent text-text-primary font-sans">
+      <ScrollToTop />
       <Navbar />
       
       {/* Route transitions */}
