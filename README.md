@@ -468,5 +468,3 @@ The app starts on **`http://localhost:3000`** and proxies `/api` calls to the ba
 No `LICENSE` file is currently present in the repository. All rights are reserved by default until a license is added — check with the repository owner before reusing this code.
 
 ---
-
-*This README was generated from the current state of the `dev` branch and reflects the codebase's actual dependencies, security implementation, and data model as of the latest commit.*
