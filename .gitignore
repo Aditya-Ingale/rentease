@@ -39,3 +39,29 @@ Thumbs.db
 # ── Logs ──
 *.log
 logs/
+
+
+# IntelliJ build output
+out/
+/out/
+
+# ── IDE ──
+.idea/
+.vscode/settings.json
+*.iml
+.DS_Store
+Thumbs.db
+
+# IntelliJ build output
+out/
+backend/out/
+*.class
+
+
+ml-service/model/*.pkl
+ml-service/model/*.joblib
+ml-service/data/
+# ML Model files (too large for Git)
+ml-service/model/
+ml-service/data/
+ml-service/*.pkl
