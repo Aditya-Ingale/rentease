@@ -1,116 +1,118 @@
 package com.rentease.backend.service;
 
-import lombok.RequiredArgsConstructor;
+import com.resend.Resend;
+import com.resend.core.exception.ResendException;
+import com.resend.services.emails.model.CreateEmailOptions;
+import com.resend.services.emails.model.CreateEmailResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final Resend resend;
+    private final String fromEmail;
+    private final String fromName;
 
-    @Value("${app.frontend.url:http://localhost:3000}")
-    private String frontendUrl;
+    public EmailService(
+            @Value("${resend.api.key}") String apiKey,
+            @Value("${resend.from.email:onboarding@resend.dev}") String fromEmail,
+            @Value("${resend.from.name:RentEase}") String fromName) {
+        this.resend = new Resend(apiKey);
+        this.fromEmail = fromEmail;
+        this.fromName = fromName;
+    }
+
+    private void sendEmail(String to, String subject, String body) {
+        try {
+            CreateEmailOptions params = CreateEmailOptions.builder()
+                    .from(fromName + " <" + fromEmail + ">")
+                    .to(to)
+                    .subject(subject)
+                    .text(body)
+                    .build();
+
+            CreateEmailResponse response = resend.emails().send(params);
+            log.info("Email sent via Resend: id={} to={}", response.getId(), to);
+        } catch (ResendException e) {
+            log.error("Resend email failed to {}: {}", to, e.getMessage());
+            throw new RuntimeException("Failed to send email. Please try again.");
+        }
+    }
 
     public void sendOtpEmail(String toEmail, String name, String otp) {
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(toEmail);
-            message.setSubject("RentEase — Your OTP Verification Code");
-            message.setText(
-                    "Hello " + name + ",\n\n" +
-                            "Welcome to RentEase!\n\n" +
-                            "Your OTP verification code is:\n\n" +
-                            "        " + otp + "\n\n" +
-                            "This code is valid for 10 minutes.\n" +
-                            "Do not share this code with anyone.\n\n" +
-                            "If you did not register on RentEase, please ignore this email.\n\n" +
-                            "Regards,\n" +
-                            "The RentEase Team"
-            );
-            mailSender.send(message);
-            log.info("OTP email sent to {}", toEmail);
-        } catch (Exception e) {
-            log.error("Failed to send OTP email to {}: {}", toEmail, e.getMessage());
-            throw new RuntimeException("Failed to send OTP email. Please try again.");
-        }
+        sendEmail(
+                toEmail,
+                "RentEase — Your OTP Verification Code",
+                "Hello " + name + ",\n\n" +
+                        "Welcome to RentEase!\n\n" +
+                        "Your OTP verification code is:\n\n" +
+                        "        " + otp + "\n\n" +
+                        "This code is valid for 10 minutes.\n" +
+                        "Do not share this code with anyone.\n\n" +
+                        "If you did not register on RentEase, please ignore this email.\n\n" +
+                        "Regards,\nThe RentEase Team"
+        );
     }
 
     public void sendWelcomeEmail(String toEmail, String name) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(toEmail);
-            message.setSubject("Welcome to RentEase!");
-            message.setText(
+            sendEmail(
+                    toEmail,
+                    "Welcome to RentEase!",
                     "Hello " + name + ",\n\n" +
                             "Your account has been verified successfully!\n\n" +
                             "You can now:\n" +
                             "- Search properties across Indian cities\n" +
                             "- Get AI-powered fair rent estimates\n" +
                             "- Book properties directly\n\n" +
-                            "Start exploring: " + frontendUrl + "\n\n" +
-                            "Regards,\n" +
-                            "The RentEase Team"
+                            "Regards,\nThe RentEase Team"
             );
-            mailSender.send(message);
         } catch (Exception e) {
-            log.error("Failed to send welcome email to {}: {}", toEmail, e.getMessage());
+            log.error("Welcome email failed: {}", e.getMessage());
+            // Non-fatal — don't throw
         }
     }
 
     public void sendBookingNotification(String toEmail, String toName,
-                                        String otherPartyName, String propertyTitle,
+                                        String otherPartyName,
+                                        String propertyTitle,
                                         String subject) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(toEmail);
-            message.setSubject("RentEase — " + subject);
-            message.setText(
+            sendEmail(
+                    toEmail,
+                    "RentEase — " + subject,
                     "Hello " + toName + ",\n\n" +
                             subject + "\n\n" +
                             "Property: " + propertyTitle + "\n" +
                             "Related to: " + otherPartyName + "\n\n" +
-                            "Log in to RentEase to view full details: " + frontendUrl + "\n\n" +
-                            "Regards,\n" +
-                            "The RentEase Team"
+                            "Log in to RentEase to view full details.\n\n" +
+                            "Regards,\nThe RentEase Team"
             );
-            mailSender.send(message);
-            log.info("Booking notification sent to {}", toEmail);
         } catch (Exception e) {
-            log.error("Failed to send booking notification to {}: {}", toEmail, e.getMessage());
+            log.error("Booking notification failed: {}", e.getMessage());
+            // Non-fatal — booking still works
         }
     }
 
     public void sendPasswordResetEmail(String toEmail,
                                        String name,
                                        String resetToken) {
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(toEmail);
-            message.setSubject("RentEase — Password Reset Request");
-            message.setText(
-                    "Hello " + name + ",\n\n" +
-                            "We received a request to reset your RentEase password.\n\n" +
-                            "Click the link below to reset your password:\n\n" +
-                            frontendUrl + "/reset-password?token=" + resetToken + "\n\n" +
-                            "Or copy this token manually if the link doesn't work:\n" +
-                            resetToken + "\n\n" +
-                            "This link expires in 15 minutes.\n\n" +
-                            "If you did not request a password reset, ignore this email.\n\n" +
-                            "Regards,\nThe RentEase Team"
-            );
-            mailSender.send(message);
-            log.info("Password reset email sent to {}", toEmail);
-        } catch (Exception e) {
-            log.error("Failed to send reset email: {}", e.getMessage());
-            throw new RuntimeException(
-                    "Failed to send reset email. Please try again.");
-        }
+        sendEmail(
+                toEmail,
+                "RentEase — Password Reset Request",
+                "Hello " + name + ",\n\n" +
+                        "We received a request to reset your RentEase password.\n\n" +
+                        "Click the link below to reset your password:\n\n" +
+                        "http://localhost:3000/reset-password?token=" + resetToken + "\n\n" +
+                        "Or copy this token manually if the link doesn't work:\n" +
+                        resetToken + "\n\n" +
+                        "This link expires in 15 minutes.\n\n" +
+                        "If you did not request a password reset, ignore this email.\n\n" +
+                        "Regards,\nThe RentEase Team"
+        );
     }
 
     public void sendPaymentConfirmation(String toEmail,
@@ -118,10 +120,9 @@ public class EmailService {
                                         String propertyTitle,
                                         Double amount) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(toEmail);
-            message.setSubject("RentEase — Payment Confirmed!");
-            message.setText(
+            sendEmail(
+                    toEmail,
+                    "RentEase — Payment Confirmed!",
                     "Hello " + name + ",\n\n" +
                             "Your payment has been confirmed successfully!\n\n" +
                             "Property: " + propertyTitle + "\n" +
@@ -129,14 +130,11 @@ public class EmailService {
                             "Your booking is now COMPLETED.\n" +
                             "You can now write a review after your stay.\n\n" +
                             "Thank you for using RentEase!\n\n" +
-                            "Regards,\n" +
-                            "The RentEase Team"
+                            "Regards,\nThe RentEase Team"
             );
-            mailSender.send(message);
-            log.info("Payment confirmation sent to {}", toEmail);
         } catch (Exception e) {
-            log.error("Failed to send payment confirmation to {}: {}",
-                    toEmail, e.getMessage());
+            log.error("Payment confirmation email failed: {}", e.getMessage());
+            // Non-fatal
         }
     }
 }
