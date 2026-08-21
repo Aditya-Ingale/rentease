@@ -1,44 +1,62 @@
 package com.rentease.backend.service;
 
-import com.resend.Resend;
-import com.resend.core.exception.ResendException;
-import com.resend.services.emails.model.CreateEmailOptions;
-import com.resend.services.emails.model.CreateEmailResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Map;
 
 @Service
 @Slf4j
 public class EmailService {
 
-    private final Resend resend;
+    private final RestTemplate restTemplate;
+    private final String apiKey;
     private final String fromEmail;
     private final String fromName;
 
     public EmailService(
+            RestTemplate restTemplate,
             @Value("${resend.api.key}") String apiKey,
             @Value("${resend.from.email:onboarding@resend.dev}") String fromEmail,
             @Value("${resend.from.name:RentEase}") String fromName) {
-        this.resend = new Resend(apiKey);
+        this.restTemplate = restTemplate;
+        this.apiKey = apiKey;
         this.fromEmail = fromEmail;
         this.fromName = fromName;
     }
 
     private void sendEmail(String to, String subject, String body) {
         try {
-            CreateEmailOptions params = CreateEmailOptions.builder()
-                    .from(fromName + " <" + fromEmail + ">")
-                    .to(to)
-                    .subject(subject)
-                    .text(body)
-                    .build();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(apiKey);
 
-            CreateEmailResponse response = resend.emails().send(params);
-            log.info("Email sent via Resend: id={} to={}", response.getId(), to);
-        } catch (ResendException e) {
-            log.error("Resend email failed to {}: {}", to, e.getMessage());
-            throw new RuntimeException("Failed to send email. Please try again.");
+            Map<String, Object> payload = Map.of(
+                    "from", fromName + " <" + fromEmail + ">",
+                    "to", new String[]{to},
+                    "subject", subject,
+                    "text", body
+            );
+
+            HttpEntity<Map<String, Object>> request =
+                    new HttpEntity<>(payload, headers);
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    "https://api.resend.com/emails",
+                    request,
+                    Map.class
+            );
+
+            log.info("Email sent via Resend API: id={} to={}",
+                    response.getBody().get("id"), to);
+
+        } catch (Exception e) {
+            log.error("Resend API failed to {}: {}", to, e.getMessage());
+            throw new RuntimeException(
+                    "Failed to send email. Please try again.");
         }
     }
 
@@ -64,15 +82,12 @@ public class EmailService {
                     "Welcome to RentEase!",
                     "Hello " + name + ",\n\n" +
                             "Your account has been verified successfully!\n\n" +
-                            "You can now:\n" +
-                            "- Search properties across Indian cities\n" +
-                            "- Get AI-powered fair rent estimates\n" +
-                            "- Book properties directly\n\n" +
+                            "You can now search properties, get AI rent estimates, " +
+                            "and book properties directly.\n\n" +
                             "Regards,\nThe RentEase Team"
             );
         } catch (Exception e) {
             log.error("Welcome email failed: {}", e.getMessage());
-            // Non-fatal — don't throw
         }
     }
 
@@ -93,7 +108,6 @@ public class EmailService {
             );
         } catch (Exception e) {
             log.error("Booking notification failed: {}", e.getMessage());
-            // Non-fatal — booking still works
         }
     }
 
@@ -104,13 +118,11 @@ public class EmailService {
                 toEmail,
                 "RentEase — Password Reset Request",
                 "Hello " + name + ",\n\n" +
-                        "We received a request to reset your RentEase password.\n\n" +
                         "Click the link below to reset your password:\n\n" +
-                        "http://localhost:3000/reset-password?token=" + resetToken + "\n\n" +
-                        "Or copy this token manually if the link doesn't work:\n" +
-                        resetToken + "\n\n" +
+                        "https://rentease.vercel.app/reset-password?token="
+                        + resetToken + "\n\n" +
+                        "Or copy this token manually:\n" + resetToken + "\n\n" +
                         "This link expires in 15 minutes.\n\n" +
-                        "If you did not request a password reset, ignore this email.\n\n" +
                         "Regards,\nThe RentEase Team"
         );
     }
@@ -124,17 +136,14 @@ public class EmailService {
                     toEmail,
                     "RentEase — Payment Confirmed!",
                     "Hello " + name + ",\n\n" +
-                            "Your payment has been confirmed successfully!\n\n" +
+                            "Your payment has been confirmed!\n\n" +
                             "Property: " + propertyTitle + "\n" +
                             "Amount Paid: ₹" + String.format("%.2f", amount) + "\n\n" +
-                            "Your booking is now COMPLETED.\n" +
-                            "You can now write a review after your stay.\n\n" +
-                            "Thank you for using RentEase!\n\n" +
+                            "Your booking is now COMPLETED.\n\n" +
                             "Regards,\nThe RentEase Team"
             );
         } catch (Exception e) {
-            log.error("Payment confirmation email failed: {}", e.getMessage());
-            // Non-fatal
+            log.error("Payment confirmation failed: {}", e.getMessage());
         }
     }
 }
