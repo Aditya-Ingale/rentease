@@ -6,6 +6,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -16,45 +17,55 @@ public class EmailService {
     private final String apiKey;
     private final String fromEmail;
     private final String fromName;
+    private final String frontendUrl;
 
     public EmailService(
             RestTemplate restTemplate,
-            @Value("${resend.api.key}") String apiKey,
-            @Value("${resend.from.email:onboarding@resend.dev}") String fromEmail,
-            @Value("${resend.from.name:RentEase}") String fromName) {
+            @Value("${brevo.api.key}") String apiKey,
+            @Value("${brevo.from.email:noreply@rentease.com}") String fromEmail,
+            @Value("${brevo.from.name:RentEase}") String fromName,
+            @Value("${app.frontend.url:http://localhost:3000}") String frontendUrl) {
         this.restTemplate = restTemplate;
         this.apiKey = apiKey;
         this.fromEmail = fromEmail;
         this.fromName = fromName;
+        this.frontendUrl = frontendUrl;
     }
 
-    private void sendEmail(String to, String subject, String body) {
+    private void sendEmail(String to, String toName,
+                           String subject, String body) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(apiKey);
+            headers.set("api-key", apiKey);
 
             Map<String, Object> payload = Map.of(
-                    "from", fromName + " <" + fromEmail + ">",
-                    "to", new String[]{to},
+                    "sender", Map.of(
+                            "name", fromName,
+                            "email", fromEmail
+                    ),
+                    "to", List.of(Map.of(
+                            "email", to,
+                            "name", toName
+                    )),
                     "subject", subject,
-                    "text", body
+                    "textContent", body
             );
 
             HttpEntity<Map<String, Object>> request =
                     new HttpEntity<>(payload, headers);
 
             ResponseEntity<Map> response = restTemplate.postForEntity(
-                    "https://api.resend.com/emails",
+                    "https://api.brevo.com/v3/smtp/email",
                     request,
                     Map.class
             );
 
-            log.info("Email sent via Resend API: id={} to={}",
-                    response.getBody().get("id"), to);
+            log.info("Email sent via Brevo: to={} subject={}",
+                    to, subject);
 
         } catch (Exception e) {
-            log.error("Resend API failed to {}: {}", to, e.getMessage());
+            log.error("Brevo email failed to {}: {}", to, e.getMessage());
             throw new RuntimeException(
                     "Failed to send email. Please try again.");
         }
@@ -62,7 +73,7 @@ public class EmailService {
 
     public void sendOtpEmail(String toEmail, String name, String otp) {
         sendEmail(
-                toEmail,
+                toEmail, name,
                 "RentEase — Your OTP Verification Code",
                 "Hello " + name + ",\n\n" +
                         "Welcome to RentEase!\n\n" +
@@ -70,7 +81,8 @@ public class EmailService {
                         "        " + otp + "\n\n" +
                         "This code is valid for 10 minutes.\n" +
                         "Do not share this code with anyone.\n\n" +
-                        "If you did not register on RentEase, please ignore this email.\n\n" +
+                        "If you did not register on RentEase, " +
+                        "please ignore this email.\n\n" +
                         "Regards,\nThe RentEase Team"
         );
     }
@@ -78,12 +90,15 @@ public class EmailService {
     public void sendWelcomeEmail(String toEmail, String name) {
         try {
             sendEmail(
-                    toEmail,
+                    toEmail, name,
                     "Welcome to RentEase!",
                     "Hello " + name + ",\n\n" +
                             "Your account has been verified successfully!\n\n" +
-                            "You can now search properties, get AI rent estimates, " +
-                            "and book properties directly.\n\n" +
+                            "You can now:\n" +
+                            "- Search properties across Indian cities\n" +
+                            "- Get AI-powered fair rent estimates\n" +
+                            "- Book properties directly\n\n" +
+                            "Start exploring: " + frontendUrl + "\n\n" +
                             "Regards,\nThe RentEase Team"
             );
         } catch (Exception e) {
@@ -97,13 +112,14 @@ public class EmailService {
                                         String subject) {
         try {
             sendEmail(
-                    toEmail,
+                    toEmail, toName,
                     "RentEase — " + subject,
                     "Hello " + toName + ",\n\n" +
                             subject + "\n\n" +
                             "Property: " + propertyTitle + "\n" +
                             "Related to: " + otherPartyName + "\n\n" +
-                            "Log in to RentEase to view full details.\n\n" +
+                            "Log in to RentEase to view full details: " +
+                            frontendUrl + "\n\n" +
                             "Regards,\nThe RentEase Team"
             );
         } catch (Exception e) {
@@ -115,14 +131,15 @@ public class EmailService {
                                        String name,
                                        String resetToken) {
         sendEmail(
-                toEmail,
+                toEmail, name,
                 "RentEase — Password Reset Request",
                 "Hello " + name + ",\n\n" +
+                        "We received a request to reset your RentEase password.\n\n" +
                         "Click the link below to reset your password:\n\n" +
-                        "https://rentease.vercel.app/reset-password?token="
-                        + resetToken + "\n\n" +
+                        frontendUrl + "/reset-password?token=" + resetToken + "\n\n" +
                         "Or copy this token manually:\n" + resetToken + "\n\n" +
                         "This link expires in 15 minutes.\n\n" +
+                        "If you did not request this, ignore this email.\n\n" +
                         "Regards,\nThe RentEase Team"
         );
     }
@@ -133,13 +150,15 @@ public class EmailService {
                                         Double amount) {
         try {
             sendEmail(
-                    toEmail,
+                    toEmail, name,
                     "RentEase — Payment Confirmed!",
                     "Hello " + name + ",\n\n" +
-                            "Your payment has been confirmed!\n\n" +
+                            "Your payment has been confirmed successfully!\n\n" +
                             "Property: " + propertyTitle + "\n" +
                             "Amount Paid: ₹" + String.format("%.2f", amount) + "\n\n" +
-                            "Your booking is now COMPLETED.\n\n" +
+                            "Your booking is now COMPLETED.\n" +
+                            "You can now write a review after your stay.\n\n" +
+                            "Thank you for using RentEase!\n\n" +
                             "Regards,\nThe RentEase Team"
             );
         } catch (Exception e) {
