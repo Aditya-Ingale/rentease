@@ -5,6 +5,7 @@ import com.rentease.backend.entity.User;
 import com.rentease.backend.repository.UserRepository;
 import com.rentease.backend.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +14,7 @@ import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -40,7 +42,18 @@ public class AuthService {
 
         User saved = userRepository.save(user);
 
-        emailService.sendOtpEmail(request.getEmail(), request.getName(), otp);
+        // Non-fatal email — registration succeeds even if email fails
+        try {
+            emailService.sendOtpEmail(
+                    request.getEmail(),
+                    request.getName(),
+                    otp
+            );
+        } catch (Exception e) {
+            log.error("OTP email failed for {} — user registered, can resend OTP: {}",
+                    request.getEmail(), e.getMessage());
+            // User is saved — they can use POST /api/auth/resend-otp
+        }
 
         return AuthResponse.builder()
                 .userId(saved.getId())
