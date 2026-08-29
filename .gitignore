@@ -63,5 +63,5 @@ ml-service/model/*.joblib
 ml-service/data/
 # ML Model files (too large for Git)
 ml-service/model/
-ml-service/data/
+#ml-service/data/
 ml-service/*.pkl
