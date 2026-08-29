@@ -19,7 +19,7 @@ ml-service/__pycache__/
 ml-service/*.pkl
 ml-service/*.pyc
 ml-service/.env
-ml-service/data/
+#ml-service/data/
 
 # ── Secrets — NEVER COMMIT ──
 .env
@@ -60,7 +60,7 @@ backend/out/
 
 ml-service/model/*.pkl
 ml-service/model/*.joblib
-ml-service/data/
+#ml-service/data/
 # ML Model files (too large for Git)
 ml-service/model/
 #ml-service/data/
