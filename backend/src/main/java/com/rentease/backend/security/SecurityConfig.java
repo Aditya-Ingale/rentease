@@ -59,7 +59,8 @@ public class SecurityConfig {
                 "http://localhost:5173",
                 "http://localhost:3000",
                 "https://rentease-backend-8a3m.onrender.com",
-                "https://*.vercel.app"  // covers all Vercel preview URLs
+                "https://*.vercel.app",  // covers all Vercel preview URLs
+                "https://rentease-six-amber.vercel.app"
                 ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
